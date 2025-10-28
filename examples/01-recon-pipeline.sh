@@ -156,11 +156,11 @@ parse_results() {
 
         if [[ "$in_networks" == true ]] && [[ -n "$bssid" ]]; then
             # Clean up fields
-            bssid=$(echo "$bssid" | xargs)
-            channel=$(echo "$channel" | xargs)
-            power=$(echo "$power" | xargs)
-            privacy=$(echo "$privacy" | xargs)
-            essid=$(echo "$essid" | xargs)
+            bssid=$(echo "$bssid" | xargs </dev/null)
+            channel=$(echo "$channel" | xargs </dev/null)
+            power=$(echo "$power" | xargs </dev/null)
+            privacy=$(echo "$privacy" | xargs </dev/null)
+            essid=$(echo "$essid" | xargs </dev/null)
 
             # Skip if BSSID is empty or invalid
             [[ -z "$bssid" || "$bssid" == "BSSID" ]] && continue
@@ -170,7 +170,7 @@ parse_results() {
                 echo "    ," >> "${JSON_FILE}"
             fi
 
-            cat >> "${JSON_FILE}" << JSON_ENTRY
+            cat >> "${JSON_FILE}" </dev/null << JSON_ENTRY
     {
       "bssid": "${bssid}",
       "channel": "${channel}",
