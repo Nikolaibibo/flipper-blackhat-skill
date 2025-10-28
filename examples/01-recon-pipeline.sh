@@ -101,10 +101,7 @@ scan_networks() {
         airmon-ng start "${INTERFACE}" &>/dev/null || true
     fi
 
-    # Perform scan using bh command
-    local scan_output=$(bh wifi list "${INTERFACE}" 2>&1)
-
-    # Also capture with airodump-ng for detailed info
+    # Capture networks with airodump-ng
     local airodump_file="${OUTPUT_DIR}/scan_${TIMESTAMP}"
     timeout "${SCAN_DURATION}" airodump-ng "${INTERFACE}" \
         -w "${airodump_file}" \
