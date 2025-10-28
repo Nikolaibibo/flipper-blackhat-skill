@@ -1,0 +1,4 @@
+# GitHub Actions workflows require special permissions to commit
+# The test.yml file is provided as a template but must be added manually
+# See .github/README.md for instructions
+workflows/test.yml
