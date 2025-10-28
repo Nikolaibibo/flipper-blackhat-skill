@@ -1,0 +1,83 @@
+#!/bin/bash
+# Mock iw command for local testing
+# Simulates interface information queries
+
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+    dev)
+        if [[ "$1" == "wlan0" || "$1" == "wlan1" ]]; then
+            INTERFACE="$1"
+            shift
+            SUBCOMMAND="$1"
+
+            case "$SUBCOMMAND" in
+                info)
+                    # Default to monitor mode for wlan0, managed for wlan1
+                    if [[ "$INTERFACE" == "wlan0" ]]; then
+                        cat << 'EOF'
+Interface wlan0
+	ifindex 3
+	wdev 0x1
+	addr aa:bb:cc:dd:ee:ff
+	type monitor
+	wiphy 0
+	channel 6 (2437 MHz), width: 20 MHz, center1: 2437 MHz
+	txpower 20.00 dBm
+EOF
+                    else
+                        cat << 'EOF'
+Interface wlan1
+	ifindex 4
+	wdev 0x2
+	addr ff:ee:dd:cc:bb:aa
+	ssid ManagementNetwork
+	type managed
+	wiphy 1
+	channel 36 (5180 MHz), width: 80 MHz, center1: 5210 MHz
+	txpower 20.00 dBm
+EOF
+                    fi
+                    ;;
+                *)
+                    echo "[MOCK IW] Unknown subcommand: $SUBCOMMAND" >&2
+                    exit 1
+                    ;;
+            esac
+        else
+            echo "[MOCK IW] Interface $1 not found" >&2
+            exit 1
+        fi
+        ;;
+
+    list)
+        # List available devices
+        cat << 'EOF'
+phy#0
+	Wiphy phy0
+	max # scan SSIDs: 20
+	Interface wlan0
+		ifindex 3
+		wdev 0x1
+		addr aa:bb:cc:dd:ee:ff
+		type monitor
+
+phy#1
+	Wiphy phy1
+	max # scan SSIDs: 20
+	Interface wlan1
+		ifindex 4
+		wdev 0x2
+		addr ff:ee:dd:cc:bb:aa
+		type managed
+EOF
+        ;;
+
+    *)
+        echo "[MOCK IW] Unknown command: $COMMAND" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

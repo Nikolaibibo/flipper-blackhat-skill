@@ -1,0 +1,30 @@
+#!/bin/bash
+# Mock airmon-ng for local testing
+# Simulates monitor mode enable/disable (no-op in mock env)
+
+COMMAND="$1"
+INTERFACE="$2"
+
+case "$COMMAND" in
+    start)
+        echo "[MOCK AIRMON] Enabling monitor mode on $INTERFACE..." >&2
+        sleep 1
+        echo "[MOCK AIRMON] Monitor mode enabled on ${INTERFACE}" >&2
+        echo "[MOCK AIRMON] Note: In mock environment, wlan0 is already in monitor mode" >&2
+        ;;
+    stop)
+        echo "[MOCK AIRMON] Disabling monitor mode on $INTERFACE..." >&2
+        sleep 1
+        echo "[MOCK AIRMON] Monitor mode disabled on ${INTERFACE}" >&2
+        ;;
+    check)
+        echo "[MOCK AIRMON] Checking for interfering processes..." >&2
+        echo "[MOCK AIRMON] No interfering processes found" >&2
+        ;;
+    *)
+        echo "Usage: airmon-ng {start|stop|check} [interface]" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

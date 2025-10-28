@@ -1,0 +1,109 @@
+#!/bin/bash
+# Mock bh command for local testing
+# Simulates BlackHat OS bh commands without requiring actual hardware
+
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+    wifi)
+        SUBCOMMAND="$1"
+        shift
+        case "$SUBCOMMAND" in
+            list)
+                # Simulate network list output
+                cat << 'EOF'
+SSID: TestNetwork_5G
+BSSID: AA:BB:CC:DD:EE:FF
+Channel: 36
+Signal: -45 dBm
+Encryption: WPA2-PSK
+
+SSID: CoffeeShop_Guest
+BSSID: 11:22:33:44:55:66
+Channel: 6
+Signal: -62 dBm
+Encryption: WPA2-PSK
+
+SSID: OpenNetwork
+BSSID: 77:88:99:AA:BB:CC
+Channel: 11
+Signal: -72 dBm
+Encryption: Open
+
+SSID: Corporate_5G
+BSSID: DD:EE:FF:00:11:22
+Channel: 149
+Signal: -80 dBm
+Encryption: WPA2-Enterprise
+EOF
+                ;;
+            ap)
+                INTERFACE="${1:-wlan0}"
+                echo "[MOCK BH] Starting access point on $INTERFACE..."
+                sleep 1
+                echo "[MOCK BH] AP started successfully"
+                echo "SSID: FlipperAP"
+                echo "Password: flipper123"
+                ;;
+            *)
+                echo "[MOCK BH] Unknown wifi subcommand: $SUBCOMMAND" >&2
+                exit 1
+                ;;
+        esac
+        ;;
+
+    evil_twin)
+        echo "[MOCK BH] Enabling evil twin mode..."
+        sleep 1
+        echo "[MOCK BH] Evil twin mode active"
+        echo "  - Cloning target SSID"
+        echo "  - Starting rogue AP"
+        echo "  - Ready to capture credentials"
+        ;;
+
+    evil_portal)
+        echo "[MOCK BH] Starting credential capture portal..."
+        sleep 1
+        echo "[MOCK BH] Portal running on http://192.168.4.1"
+        echo "  - Serving login page"
+        echo "  - Credentials will be saved to /root/captured.txt"
+        ;;
+
+    deauth_all)
+        BSSID="${1:-AA:BB:CC:DD:EE:FF}"
+        INTERFACE="${2:-wlan0}"
+        echo "[MOCK BH] Deauthenticating all clients from $BSSID on $INTERFACE..."
+        sleep 2
+        echo "[MOCK BH] Sent 50 deauth packets"
+        echo "[MOCK BH] 3 clients disconnected"
+        ;;
+
+    deauth_scan)
+        INTERFACE="${1:-wlan0}"
+        echo "[MOCK BH] Scanning for deauth targets on $INTERFACE..."
+        sleep 2
+        cat << 'EOF'
+[MOCK BH] Found 3 active networks with clients:
+
+Network: TestNetwork_5G (AA:BB:CC:DD:EE:FF)
+  Client: 11:11:11:11:11:11 (-50 dBm)
+  Client: 22:22:22:22:22:22 (-55 dBm)
+
+Network: CoffeeShop_Guest (11:22:33:44:55:66)
+  Client: 33:33:33:33:33:33 (-60 dBm)
+
+Network: Corporate_5G (DD:EE:FF:00:11:22)
+  Client: 44:44:44:44:44:44 (-45 dBm)
+  Client: 55:55:55:55:55:55 (-52 dBm)
+EOF
+        ;;
+
+    *)
+        echo "[MOCK BH] Unknown command: $COMMAND" >&2
+        echo "Available commands: wifi, evil_twin, evil_portal, deauth_all, deauth_scan" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

@@ -1,0 +1,85 @@
+# Pre-commit hooks for Flipper BlackHat project
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # ShellCheck - Bash static analysis
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+        args: [--severity=warning]
+        files: \.sh$
+        exclude: ^tests/mocks/
+
+  # Python formatting with black
+  - repo: https://github.com/psf/black
+    rev: 23.11.0
+    hooks:
+      - id: black
+        files: \.py$
+        language_version: python3
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent giant files from being committed
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+      # Check for files that would conflict in case-insensitive filesystems
+      - id: check-case-conflict
+
+      # Check for merge conflicts
+      - id: check-merge-conflict
+
+      # Check for broken symlinks
+      - id: check-symlinks
+
+      # Check YAML syntax
+      - id: check-yaml
+        args: ['--safe']
+
+      # Check JSON syntax
+      - id: check-json
+
+      # Check for files that contain private keys
+      - id: detect-private-key
+
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+        exclude: \.csv$
+
+      # Trim trailing whitespace
+      - id: trailing-whitespace
+        exclude: \.csv$
+
+      # Check for executables with shebangs
+      - id: check-executables-have-shebangs
+
+      # Check for shebangs in non-executables
+      - id: check-shebang-scripts-are-executable
+
+  # Custom validation hook
+  - repo: local
+    hooks:
+      - id: validate-scripts
+        name: Run validation script
+        entry: ./dev-tools/validate.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+        files: \.sh$
+        stages: [commit]
+
+  # Prevent commits to main/master
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: no-commit-to-branch
+        args: ['--branch', 'main', '--branch', 'master']
+
+# Global settings
+default_stages: [commit]
+fail_fast: false

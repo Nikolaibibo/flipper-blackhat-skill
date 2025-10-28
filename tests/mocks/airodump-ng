@@ -1,0 +1,71 @@
+#!/bin/bash
+# Mock airodump-ng for local testing
+# Generates realistic CSV output without requiring monitor mode
+
+# Parse arguments
+OUTPUT_PREFIX=""
+INTERFACE=""
+CHANNEL=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --write|-w)
+            shift
+            OUTPUT_PREFIX="$1"
+            ;;
+        --channel|-c)
+            shift
+            CHANNEL="$1"
+            ;;
+        --bssid)
+            shift
+            BSSID="$1"
+            ;;
+        wlan*)
+            INTERFACE="$1"
+            ;;
+    esac
+    shift
+done
+
+# Simulate scan duration (short for testing)
+SCAN_DURATION=2
+
+echo "[MOCK AIRODUMP] Starting scan on ${INTERFACE:-wlan0}${CHANNEL:+ channel $CHANNEL}..." >&2
+
+# Simulate scanning with progress
+for i in $(seq 1 $SCAN_DURATION); do
+    echo -ne "[MOCK AIRODUMP] Scanning... $i/$SCAN_DURATION\r" >&2
+    sleep 1
+done
+echo "" >&2
+
+# Generate realistic CSV output if --write specified
+if [[ -n "$OUTPUT_PREFIX" ]]; then
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    CSV_FILE="${OUTPUT_PREFIX}-01.csv"
+
+    # Create output directory if needed
+    mkdir -p "$(dirname "$OUTPUT_PREFIX")"
+
+    cat > "$CSV_FILE" << 'EOF'
+BSSID, First time seen, Last time seen, channel, Speed, Privacy, Cipher, Authentication, Power, # beacons, # IV, LAN IP, ID-length, ESSID, Key
+AA:BB:CC:DD:EE:FF, 2025-10-28 10:00:00, 2025-10-28 10:10:00, 6, 54, WPA2, CCMP, PSK, -45, 100, 0, 0.0.0.0, 14, TestNetwork_5G,
+11:22:33:44:55:66, 2025-10-28 10:00:00, 2025-10-28 10:10:00, 6, 54, WPA2, CCMP, PSK, -62, 75, 0, 0.0.0.0, 17, CoffeeShop_Guest,
+77:88:99:AA:BB:CC, 2025-10-28 10:00:00, 2025-10-28 10:10:00, 11, 54, OPN, , , -72, 50, 0, 0.0.0.0, 11, OpenNetwork,
+DD:EE:FF:00:11:22, 2025-10-28 10:00:00, 2025-10-28 10:10:00, 149, 54, WPA2, CCMP, MGT, -80, 25, 0, 0.0.0.0, 12, Corporate_5G,
+
+Station MAC, First time seen, Last time seen, Power, # packets, BSSID, Probed ESSIDs
+11:11:11:11:11:11, 2025-10-28 10:00:00, 2025-10-28 10:10:00, -50, 150, AA:BB:CC:DD:EE:FF, TestNetwork_5G
+22:22:22:22:22:22, 2025-10-28 10:00:00, 2025-10-28 10:10:00, -55, 100, AA:BB:CC:DD:EE:FF, TestNetwork_5G
+33:33:33:33:33:33, 2025-10-28 10:00:00, 2025-10-28 10:10:00, -60, 80, 11:22:33:44:55:66, CoffeeShop_Guest
+44:44:44:44:44:44, 2025-10-28 10:00:00, 2025-10-28 10:10:00, -45, 200, DD:EE:FF:00:11:22, Corporate_5G
+55:55:55:55:55:55, 2025-10-28 10:00:00, 2025-10-28 10:10:00, -52, 180, DD:EE:FF:00:11:22, Corporate_5G
+EOF
+
+    echo "[MOCK AIRODUMP] Generated CSV: $CSV_FILE" >&2
+    echo "[MOCK AIRODUMP] Found 4 networks, 5 clients" >&2
+fi
+
+echo "[MOCK AIRODUMP] Scan complete" >&2
+exit 0

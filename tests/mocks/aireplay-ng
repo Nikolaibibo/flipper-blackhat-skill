@@ -1,0 +1,53 @@
+#!/bin/bash
+# Mock aireplay-ng for local testing
+# Simulates deauth and injection attacks
+
+ATTACK=""
+TARGET_BSSID=""
+INTERFACE=""
+COUNT=10
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --deauth)
+            ATTACK="deauth"
+            shift
+            COUNT="$1"
+            ;;
+        -a)
+            shift
+            TARGET_BSSID="$1"
+            ;;
+        -c)
+            shift
+            CLIENT_MAC="$1"
+            ;;
+        wlan*)
+            INTERFACE="$1"
+            ;;
+    esac
+    shift
+done
+
+case "$ATTACK" in
+    deauth)
+        echo "[MOCK AIREPLAY] Starting deauth attack..." >&2
+        echo "[MOCK AIREPLAY]   Target: $TARGET_BSSID" >&2
+        echo "[MOCK AIREPLAY]   Client: ${CLIENT_MAC:-broadcast}" >&2
+        echo "[MOCK AIREPLAY]   Count: $COUNT" >&2
+        echo "[MOCK AIREPLAY]   Interface: $INTERFACE" >&2
+
+        for i in $(seq 1 "$COUNT"); do
+            echo -ne "[MOCK AIREPLAY] Sent $i/$COUNT deauth packets\r" >&2
+            sleep 0.1
+        done
+        echo "" >&2
+        echo "[MOCK AIREPLAY] Attack complete. Sent $COUNT deauth frames." >&2
+        ;;
+    *)
+        echo "[MOCK AIREPLAY] Unknown attack type" >&2
+        exit 1
+        ;;
+esac
+
+exit 0
