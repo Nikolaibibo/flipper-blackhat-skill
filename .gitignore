@@ -1,0 +1,40 @@
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+*.pcap
+*.pcapng
+*.cap
+
+# Captures and sensitive data
+/captures/
+*.hc22000
+*.hccapx
+handshake-*.cap
+credentials.txt
+
+# Temporary files
+/tmp/
+*.tmp
+.cache/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+venv/
+
+# Node
+node_modules/
+package-lock.json

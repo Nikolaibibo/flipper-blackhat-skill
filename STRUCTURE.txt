@@ -1,0 +1,31 @@
+flipper-blackhat-skill/
+├── SKILL.md                              # Main Claude skill instructions
+├── README.md                             # GitHub documentation
+├── LICENSE                               # MIT License
+├── CONTRIBUTING.md                       # Contribution guidelines
+├── .gitignore                           # Git ignore patterns
+│
+├── docs/                                # Documentation
+│   └── wifi/                           # WiFi pentesting docs
+│       ├── passive-recon.md            # Kismet, scanning (Teil 1)
+│       ├── active-recon.md             # Deauth, handshakes (Teil 2)
+│       └── attack-scenarios.md         # Evil Twin, MITM (Teil 3)
+│
+├── reference/                           # Command references
+│   └── blackhat-os-reference.md        # Complete bh tool documentation
+│
+└── examples/                            # Example scripts (future)
+    ├── wifi-scripts/                   # WiFi automation
+    ├── badusb-payloads/               # HID injection
+    └── sub-ghz-signals/               # RF analysis
+
+Core Files:
+-----------
+SKILL.md            : Claude AI instructions (18KB)
+README.md           : Project documentation (6KB)
+passive-recon.md    : WiFi reconnaissance (23KB)
+active-recon.md     : Active attacks (32KB)  
+attack-scenarios.md : Attack execution (46KB)
+blackhat-os-ref.md  : bh command reference (8KB)
+
+Total Documentation: ~133KB of professional pentesting guidance
