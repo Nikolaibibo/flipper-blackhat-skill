@@ -96,7 +96,7 @@ scan_networks() {
     echo -e "${YELLOW}[*] Scanning for WiFi networks...${NC}"
 
     # Start monitor mode if needed
-    if ! iwconfig "${INTERFACE}" 2>/dev/null | grep -q "Mode:Monitor"; then
+    if ! iw dev "${INTERFACE}" info 2>/dev/null | grep -q "type monitor"; then
         log "INFO" "Enabling monitor mode on ${INTERFACE}..."
         airmon-ng start "${INTERFACE}" &>/dev/null || true
     fi

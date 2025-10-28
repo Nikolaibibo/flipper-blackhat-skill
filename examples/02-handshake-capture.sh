@@ -127,7 +127,7 @@ preflight_check() {
     done
 
     # Enable monitor mode
-    if ! iwconfig "${INTERFACE}" 2>/dev/null | grep -q "Mode:Monitor"; then
+    if ! iw dev "${INTERFACE}" info 2>/dev/null | grep -q "type monitor"; then
         log "INFO" "Enabling monitor mode on ${INTERFACE}..."
         echo -e "${YELLOW}[*] Enabling monitor mode...${NC}"
         airmon-ng start "${INTERFACE}" &>/dev/null || true

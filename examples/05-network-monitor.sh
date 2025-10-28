@@ -305,7 +305,7 @@ main() {
     initialize
 
     # Enable monitor mode
-    if ! iwconfig "${INTERFACE}" 2>/dev/null | grep -q "Mode:Monitor"; then
+    if ! iw dev "${INTERFACE}" info 2>/dev/null | grep -q "type monitor"; then
         echo -e "${YELLOW}Enabling monitor mode...${NC}"
         airmon-ng start "${INTERFACE}" &>/dev/null || true
         sleep 2

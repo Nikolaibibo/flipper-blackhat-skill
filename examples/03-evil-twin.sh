@@ -157,7 +157,7 @@ setup_attack_interface() {
     echo -e "${CYAN}[*] Setting up attack interface...${NC}"
 
     # Enable monitor mode if needed
-    if ! iwconfig "${ATTACK_INTERFACE}" 2>/dev/null | grep -q "Mode:Monitor"; then
+    if ! iw dev "${ATTACK_INTERFACE}" info 2>/dev/null | grep -q "type monitor"; then
         log "INFO" "Enabling monitor mode on ${ATTACK_INTERFACE}..."
         airmon-ng start "${ATTACK_INTERFACE}" &>/dev/null || true
         sleep 2
