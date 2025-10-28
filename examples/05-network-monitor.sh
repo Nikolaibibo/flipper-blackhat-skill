@@ -8,7 +8,7 @@
 # Requires: BlackHat OS with bh commands
 ################################################################################
 
-set -euo pipefail
+set -eo pipefail
 
 # Configuration
 INTERFACE="${1:-wlan0}"
@@ -31,6 +31,10 @@ NC='\033[0m'
 # Tracking
 declare -A last_seen
 declare -A signal_history
+
+# Scan result counters (global to avoid subshell issues)
+scan_new_count=0
+scan_disappeared_count=0
 
 ################################################################################
 # Logging
@@ -102,11 +106,17 @@ scan_networks() {
 ################################################################################
 process_scan() {
     local scan_file="$1"
-    local new_networks=0
-    local disappeared=0
     local current_time=$(date +%s)
 
+    # Reset global counters
+    scan_new_count=0
+    scan_disappeared_count=0
+
     [[ ! -f "$scan_file" ]] && return
+
+    # Convert Windows line endings to Unix
+    tr -d '\r' < "$scan_file" > "${scan_file}.unix"
+    mv "${scan_file}.unix" "$scan_file"
 
     # Mark current time for all networks
     declare -A seen_now
@@ -137,7 +147,7 @@ process_scan() {
         if [[ ! -v last_seen["$bssid"] ]]; then
             alert "NEW NETWORK: ${essid} (${bssid}) on channel ${channel}"
             echo "${bssid},${essid},${channel},${privacy},$(date -Iseconds),$(date -Iseconds)" >> "$NETWORKS_DB"
-            ((new_networks++))
+            ((scan_new_count++)) || true
         fi
 
         # Update last seen
@@ -164,27 +174,34 @@ process_scan() {
     done < "$scan_file"
 
     # Check for disappeared networks
-    for bssid in "${!last_seen[@]}"; do
-        if [[ ! -v seen_now["$bssid"] ]]; then
-            local time_diff=$((current_time - last_seen["$bssid"]))
-            if [[ $time_diff -gt $((SCAN_INTERVAL * 3)) ]]; then
-                alert "NETWORK DISAPPEARED: ${bssid}"
-                unset last_seen["$bssid"]
-                ((disappeared++))
+    if [[ ${#last_seen[@]} -gt 0 ]]; then
+        for bssid in "${!last_seen[@]}"; do
+            if [[ ! -v seen_now["$bssid"] ]]; then
+                # Safety check: ensure last_seen value is numeric
+                local last_time=${last_seen["$bssid"]}
+                if [[ "$last_time" =~ ^[0-9]+$ ]]; then
+                    local time_diff=$((current_time - last_time))
+                    if [[ $time_diff -gt $((SCAN_INTERVAL * 3)) ]]; then
+                        alert "NETWORK DISAPPEARED: ${bssid}"
+                        unset last_seen["$bssid"]
+                        ((scan_disappeared_count++)) || true
+                    fi
+                else
+                    # Invalid timestamp, remove from tracking
+                    unset last_seen["$bssid"]
+                fi
             fi
-        fi
-    done
+        done
+    fi
 
     rm -f "${scan_file}" 2>/dev/null || true
-
-    echo "$new_networks,$disappeared"
 }
 
 ################################################################################
 # Display Status
 ################################################################################
 display_status() {
-    clear
+    clear 2>/dev/null || true
     print_banner
 
     echo -e "${BLUE}Monitor Status${NC}"
@@ -220,18 +237,17 @@ monitor_loop() {
     log "INFO" "Starting monitor loop..."
 
     while true; do
-        ((scan_count++))
+        ((scan_count++)) || true
 
         log "INFO" "Scan #${scan_count} starting..."
 
         local scan_file=$(scan_networks)
 
         if [[ -n "$scan_file" ]]; then
-            local results=$(process_scan "$scan_file")
-            local new=$(echo "$results" | cut -d',' -f1)
-            local gone=$(echo "$results" | cut -d',' -f2)
+            # Call process_scan directly (not in subshell) to preserve array modifications
+            process_scan "$scan_file"
 
-            log "INFO" "Scan #${scan_count}: ${#last_seen[@]} networks, ${new} new, ${gone} gone"
+            log "INFO" "Scan #${scan_count}: ${#last_seen[@]} networks, ${scan_new_count} new, ${scan_disappeared_count} gone"
         fi
 
         display_status
@@ -246,6 +262,10 @@ monitor_loop() {
 generate_report() {
     local report_file="${OUTPUT_DIR}/report_${TIMESTAMP}.txt"
 
+    # Calculate counts safely before heredoc
+    local network_count=0
+    [[ ${#last_seen[@]} -gt 0 ]] && network_count=${#last_seen[@]} || true
+
     cat > "${report_file}" << REPORT
 ═══════════════════════════════════════════════════════════════
   Network Monitoring Report
@@ -254,7 +274,7 @@ generate_report() {
 Monitoring Started:  $(date)
 Interface:           ${INTERFACE}
 Scan Interval:       ${SCAN_INTERVAL} seconds
-Total Networks Seen: ${#last_seen[@]}
+Total Networks Seen: ${network_count}
 
 ═══════════════════════════════════════════════════════════════
   Alerts Summary

@@ -11,11 +11,11 @@
 set -euo pipefail
 
 # Configuration
-TARGET_BSSID="${1:-}"
-TARGET_CHANNEL="${2:-}"
-TARGET_ESSID="${3:-}"
-INTERFACE="${4:-wlan0}"
-OUTPUT_DIR="${5:-/root/captures}"
+INTERFACE="${1:-wlan0}"
+TARGET_BSSID="${2:-}"
+TARGET_CHANNEL="${3:-}"
+OUTPUT_DIR="${4:-/root/handshakes}"
+TARGET_ESSID="${5:-}"  # Optional, auto-detected if not provided
 MAX_ATTEMPTS="${6:-5}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 CAPTURE_PREFIX="${OUTPUT_DIR}/handshake_${TIMESTAMP}"
@@ -62,18 +62,18 @@ EOF
 # Usage
 ################################################################################
 usage() {
-    echo "Usage: $0 <BSSID> <CHANNEL> <ESSID> [INTERFACE] [OUTPUT_DIR] [MAX_ATTEMPTS]"
+    echo "Usage: $0 <INTERFACE> <BSSID> <CHANNEL> [OUTPUT_DIR] [ESSID] [MAX_ATTEMPTS]"
     echo ""
     echo "Arguments:"
+    echo "  INTERFACE     Monitor interface (e.g., wlan0)"
     echo "  BSSID         Target AP MAC address (e.g., AA:BB:CC:DD:EE:FF)"
     echo "  CHANNEL       WiFi channel number (1-14)"
-    echo "  ESSID         Network name (SSID)"
-    echo "  INTERFACE     Monitor interface (default: wlan0)"
-    echo "  OUTPUT_DIR    Output directory (default: /root/captures)"
+    echo "  OUTPUT_DIR    Output directory (default: /root/handshakes)"
+    echo "  ESSID         Network name (optional, auto-detected)"
     echo "  MAX_ATTEMPTS  Maximum capture attempts (default: 5)"
     echo ""
     echo "Example:"
-    echo "  $0 AA:BB:CC:DD:EE:FF 6 'MyWiFi' wlan0 /root/captures 3"
+    echo "  $0 wlan0 AA:BB:CC:DD:EE:FF 6 /root/handshakes"
     exit 1
 }
 
@@ -81,7 +81,7 @@ usage() {
 # Validate Arguments
 ################################################################################
 validate_args() {
-    if [[ -z "$TARGET_BSSID" ]] || [[ -z "$TARGET_CHANNEL" ]] || [[ -z "$TARGET_ESSID" ]]; then
+    if [[ -z "$TARGET_BSSID" ]] || [[ -z "$TARGET_CHANNEL" ]]; then
         echo -e "${RED}Error: Missing required arguments${NC}\n"
         usage
     fi
@@ -157,6 +157,10 @@ check_clients() {
     # Parse for clients
     local client_count=0
     if [[ -f "${temp_file}-01.csv" ]]; then
+        # Convert Windows line endings to Unix
+        tr -d '\r' < "${temp_file}-01.csv" > "${temp_file}-01.csv.unix"
+        mv "${temp_file}-01.csv.unix" "${temp_file}-01.csv"
+
         # Count lines in the station section (after "Station MAC")
         client_count=$(awk '/Station MAC/,0' "${temp_file}-01.csv" | tail -n +2 | grep -v "^$" | wc -l)
         rm -f "${temp_file}"-* 2>/dev/null || true
@@ -319,7 +323,7 @@ capture_loop() {
         stop_capture
 
         # Increment attempt counter
-        ((attempt++))
+        ((attempt++)) || true
 
         if [[ $attempt -le $MAX_ATTEMPTS ]]; then
             echo -e "\n${YELLOW}[!] Attempt failed, retrying with more aggressive strategy...${NC}"
@@ -408,6 +412,9 @@ cleanup() {
 ################################################################################
 main() {
     print_banner
+
+    # Create output directory first (before any logging)
+    mkdir -p "${OUTPUT_DIR}"
 
     echo -e "${BLUE}Target Configuration:${NC}"
     echo -e "  BSSID:     ${TARGET_BSSID}"

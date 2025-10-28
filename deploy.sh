@@ -1,109 +1,86 @@
 #!/bin/bash
+#
+# Quick deployment script for Flipper Zero BlackHat OS scripts
+# Usage: ./deploy.sh [script_name or 'all']
+# 
+# Uses HTTP server + wget (simple and reliable)
+#
 
-################################################################################
-# Deployment Script for Flipper BlackHat Pentesting Scripts
-################################################################################
-# Purpose: Easy deployment of updated scripts to Flipper Zero BlackHat OS
-# Usage: ./deploy.sh <flipper-ip> <password>
-################################################################################
+set -euo pipefail
 
-set -e
+# Configuration
+DEVICE="root@192.168.178.122"
+PASSWORD="niko0815"
+SCRIPTS_DIR="examples"
+REMOTE_DIR="/root"
+HTTP_PORT="8888"
 
-FLIPPER_IP="${1:-192.168.178.122}"
-FLIPPER_PASS="${2:-niko0815}"
-GITHUB_RAW="https://raw.githubusercontent.com/Nikolaibibo/flipper-blackhat-skill/main"
+# Get local IP
+LOCAL_IP=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | head -1)
 
-echo "═══════════════════════════════════════════════════════════════"
-echo "  Flipper BlackHat Script Deployment"
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-echo "Target: $FLIPPER_IP"
-echo ""
+# Color output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
-# Check if expect is available
-if ! command -v expect &>/dev/null; then
-    echo "Error: 'expect' command not found. Please install it first."
-    echo "  macOS: brew install expect"
-    echo "  Linux: apt-get install expect / yum install expect"
-    exit 1
-fi
-
-# Scripts to deploy
-BASH_SCRIPTS=(
+# Script list
+ALL_SCRIPTS=(
     "01-recon-pipeline.sh"
     "02-handshake-capture.sh"
-    "03-evil-twin.sh"
     "04-deauth-campaign.sh"
     "05-network-monitor.sh"
 )
 
-PYTHON_SCRIPTS=(
-    "wifi_recon.py"
-    "capture_handshake.py"
-    "evil_twin.py"
-    "deauth_target.py"
-    "network_monitor.py"
-    "set_target.py"
-)
-
-echo "Deploying bash scripts..."
-for script in "${BASH_SCRIPTS[@]}"; do
-    echo -n "  - $script... "
-
-    expect << EXPECTEOF >/dev/null 2>&1
-    set timeout 30
-    spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@${FLIPPER_IP}
-    expect "password:"
-    send "${FLIPPER_PASS}\r"
-    expect "#"
-    send "wget -q -O /root/${script} ${GITHUB_RAW}/examples/${script}\r"
-    expect "#"
-    send "chmod +x /root/${script}\r"
-    expect "#"
-    send "exit\r"
-    expect eof
-EXPECTEOF
-
-    if [ $? -eq 0 ]; then
-        echo "✓"
+# Start HTTP server if not running
+start_http_server() {
+    if ! lsof -i :$HTTP_PORT > /dev/null 2>&1; then
+        echo -e "${YELLOW}Starting HTTP server on port $HTTP_PORT...${NC}"
+        cd "${SCRIPTS_DIR}"
+        python3 -m http.server $HTTP_PORT > /tmp/deploy_http.log 2>&1 &
+        HTTP_PID=$!
+        cd ..
+        sleep 2
+        echo -e "${GREEN}✓ HTTP server started (PID: $HTTP_PID)${NC}"
+        echo -e "${BLUE}Server URL: http://$LOCAL_IP:$HTTP_PORT/${NC}"
     else
-        echo "✗ (failed)"
+        echo -e "${GREEN}✓ HTTP server already running${NC}"
     fi
-done
+}
 
-echo ""
-echo "Deploying Python wrappers..."
-for script in "${PYTHON_SCRIPTS[@]}"; do
-    echo -n "  - $script... "
+deploy_file() {
+    local file="$1"
+    local local_path="${SCRIPTS_DIR}/${file}"
 
-    expect << EXPECTEOF >/dev/null 2>&1
-    set timeout 30
-    spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@${FLIPPER_IP}
-    expect "password:"
-    send "${FLIPPER_PASS}\r"
-    expect "#"
-    send "wget -q -O /mnt/scripts/${script} ${GITHUB_RAW}/flipper-wrappers/${script}\r"
-    expect "#"
-    send "chmod +x /mnt/scripts/${script}\r"
-    expect "#"
-    send "exit\r"
-    expect eof
-EXPECTEOF
-
-    if [ $? -eq 0 ]; then
-        echo "✓"
-    else
-        echo "✗ (failed)"
+    if [[ ! -f "$local_path" ]]; then
+        echo -e "${RED}✗ File not found: $local_path${NC}"
+        return 1
     fi
-done
 
-echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo "  Deployment Complete!"
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-echo "Bash scripts deployed to: /root/"
-echo "Python wrappers deployed to: /mnt/scripts/"
-echo ""
-echo "Run './01-recon-pipeline.sh' on the device to test!"
-echo ""
+    echo -e "${BLUE}Deploying $file...${NC}"
+
+    # Download via wget
+    sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        "$DEVICE" "wget -q -O ${REMOTE_DIR}/${file} http://${LOCAL_IP}:${HTTP_PORT}/${file} && chmod +x ${REMOTE_DIR}/${file}"
+
+    echo -e "${GREEN}✓ $file deployed${NC}"
+}
+
+# Main
+cd "$(dirname "$0")"
+
+start_http_server
+
+if [[ $# -eq 0 ]] || [[ "$1" == "all" ]]; then
+    echo "Deploying all scripts..."
+    for script in "${ALL_SCRIPTS[@]}"; do
+        deploy_file "$script"
+    done
+    echo -e "\n${GREEN}✓ All scripts deployed successfully!${NC}"
+else
+    deploy_file "$1"
+fi
+
+echo -e "\n${YELLOW}Note: HTTP server is still running. Kill manually if needed:${NC}"
+echo -e "${YELLOW}  pkill -f 'python3 -m http.server $HTTP_PORT'${NC}"

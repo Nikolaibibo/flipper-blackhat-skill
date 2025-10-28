@@ -12,8 +12,8 @@ set -euo pipefail
 
 # Configuration
 INTERFACE="${1:-wlan0}"
-SCAN_DURATION="${2:-10}"
-OUTPUT_DIR="${3:-/root/recon}"
+OUTPUT_DIR="${2:-/root/recon}"
+SCAN_DURATION="${3:-10}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="${OUTPUT_DIR}/recon_${TIMESTAMP}.log"
 JSON_FILE="${OUTPUT_DIR}/recon_${TIMESTAMP}.json"
@@ -128,6 +128,10 @@ parse_results() {
         return 1
     fi
 
+    # Convert Windows line endings to Unix
+    tr -d '\r' < "${csv_scan}" > "${csv_scan}.unix"
+    mv "${csv_scan}.unix" "${csv_scan}"
+
     # Initialize JSON structure
     echo "{" > "${JSON_FILE}"
     echo "  \"scan_timestamp\": \"$(date -Iseconds)\"," >> "${JSON_FILE}"
@@ -141,36 +145,37 @@ parse_results() {
     local network_count=0
     local in_networks=false
 
-    while IFS=, read -r bssid first_seen last_seen channel speed privacy cipher auth power beacons iv lan_ip id_length essid key; do
+    while IFS=, read -r bssid first_seen last_seen channel speed privacy cipher auth power beacons iv lan_ip id_length essid key || [[ -n "$bssid" ]]; do
         # Skip until we hit the network section
-        if [[ "$bssid" == "BSSID" ]]; then
+        if [[ "$bssid" =~ ^[[:space:]]*BSSID ]]; then
             in_networks=true
             continue
         fi
 
         # Stop when we hit the clients section
-        if [[ "$bssid" == "Station MAC" ]]; then
+        if [[ "$bssid" =~ ^[[:space:]]*Station ]]; then
             in_networks=false
             break
         fi
 
         if [[ "$in_networks" == true ]] && [[ -n "$bssid" ]]; then
-            # Clean up fields
-            bssid=$(echo "$bssid" | xargs </dev/null)
-            channel=$(echo "$channel" | xargs </dev/null)
-            power=$(echo "$power" | xargs </dev/null)
-            privacy=$(echo "$privacy" | xargs </dev/null)
-            essid=$(echo "$essid" | xargs </dev/null)
+            # Clean up fields (trim whitespace)
+            bssid=$(echo "$bssid" | xargs 2>/dev/null || echo "$bssid")
+            channel=$(echo "$channel" | xargs 2>/dev/null || echo "$channel")
+            power=$(echo "$power" | xargs 2>/dev/null || echo "$power")
+            privacy=$(echo "$privacy" | xargs 2>/dev/null || echo "$privacy")
+            essid=$(echo "$essid" | xargs 2>/dev/null || echo "$essid")
 
-            # Skip if BSSID is empty or invalid
-            [[ -z "$bssid" || "$bssid" == "BSSID" ]] && continue
+            # Skip if BSSID is empty, whitespace-only, or the header
+            [[ -z "$bssid" || "$bssid" =~ ^[[:space:]]*$ || "$bssid" == "BSSID" ]] && continue
 
-            # Add to JSON
+            # Add comma before all except first network
             if [[ $network_count -gt 0 ]]; then
                 echo "    ," >> "${JSON_FILE}"
             fi
 
-            cat >> "${JSON_FILE}" </dev/null << JSON_ENTRY
+            # Add to JSON
+            cat >> "${JSON_FILE}" << JSON_ENTRY
     {
       "bssid": "${bssid}",
       "channel": "${channel}",
@@ -184,7 +189,7 @@ JSON_ENTRY
             # Add to CSV
             echo "${bssid},${channel},${power},${privacy},${essid},0" >> "${CSV_FILE}"
 
-            ((network_count++))
+            ((network_count++)) || true
         fi
     done < "${csv_scan}"
 
@@ -225,7 +230,7 @@ rank_targets() {
         printf "${color}%-4s  %-6s  %-7s  %-12s  %s${NC}\n" \
             "$rank" "$signal" "$channel" "$encryption" "$essid"
 
-        ((rank++))
+        ((rank++)) || true
     done
 
     echo -e "${CYAN}════════════════════════════════════════════════════════════════${NC}\n"

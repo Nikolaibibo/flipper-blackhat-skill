@@ -400,6 +400,9 @@ cleanup() {
 main() {
     print_banner
 
+    # Create output directory first (before any logging)
+    mkdir -p "${OUTPUT_DIR}"
+
     echo -e "${BLUE}Evil Twin Configuration:${NC}"
     echo -e "  Target BSSID:   ${TARGET_BSSID}"
     echo -e "  Target ESSID:   ${TARGET_ESSID}"

