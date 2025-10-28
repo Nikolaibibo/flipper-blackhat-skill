@@ -107,7 +107,7 @@ scan_networks() {
         -w "${airodump_file}" \
         --output-format csv \
         --write-interval 1 \
-        2>/dev/null || true
+        &>/dev/null || true
 
     log "INFO" "Scan completed"
     echo -e "${GREEN}✓ Scan completed${NC}\n"
