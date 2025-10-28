@@ -76,6 +76,29 @@ if iw dev "${INTERFACE}" info 2>/dev/null | grep -q "type monitor"; then
 
 **Solution:** Don't use `bh wifi list` on monitor mode interfaces. Use airodump-ng instead.
 
+#### Issue #4: parse_results() Function Hanging (PARTIALLY FIXED)
+
+**Problem:** The parse_results() function in 01-recon-pipeline.sh hangs when processing CSV output, even after adding stdin redirects to xargs and heredoc commands.
+
+**Symptoms:**
+- Airodump-ng scan completes successfully
+- CSV scan files contain network data
+- Log shows "Parsing scan results..." but never "Discovered N networks"
+- Output CSV remains empty (header only)
+- Script hangs in the while loop at line 144
+
+**Partial fixes applied:**
+- ✅ Added `</dev/null` to xargs calls (lines 159-163)
+- ✅ Added `</dev/null` to cat heredoc (line 175)
+- ✅ Moved directory creation before first log() call
+
+**Still needed:**
+- The `while IFS=, read` loop itself may need stdin redirect
+- Consider rewriting without nested subshells
+- Test parse function in isolation to identify exact hang point
+
+**Workaround:** Disable strict mode temporarily or rewrite parse logic.
+
 ### Device Access
 
 **SSH Connection:**
