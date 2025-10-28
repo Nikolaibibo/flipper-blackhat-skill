@@ -2,6 +2,14 @@
 
 A comprehensive collection of automated WiFi penetration testing scripts for the Flipper Zero WiFi Dev Board running BlackHat OS.
 
+## Latest Updates
+
+**v1.1 - Script Hang Fix (2025-10-28)**
+- ✅ Fixed critical hanging issue with airodump-ng in strict bash mode
+- ✅ All scripts now properly redirect stdin to `/dev/null`
+- ✅ Scripts complete successfully with full error handling enabled
+- ✅ Added `deploy.sh` for one-command updates from GitHub
+
 ## ⚠️ Legal Disclaimer
 
 **These tools are for authorized penetration testing and security research only.**
