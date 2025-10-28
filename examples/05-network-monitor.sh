@@ -88,7 +88,7 @@ scan_networks() {
     timeout 5 airodump-ng "${INTERFACE}" \
         -w "${temp_scan}" \
         --output-format csv \
-        2>/dev/null || true
+        </dev/null >/dev/null 2>&1 || true
 
     if [[ -f "${temp_scan}-01.csv" ]]; then
         echo "${temp_scan}-01.csv"

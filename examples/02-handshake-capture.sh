@@ -152,7 +152,7 @@ check_clients() {
         --bssid "${TARGET_BSSID}" \
         -w "${temp_file}" \
         --output-format csv \
-        2>/dev/null || true
+        </dev/null >/dev/null 2>&1 || true
 
     # Parse for clients
     local client_count=0
@@ -186,7 +186,7 @@ start_capture() {
         --bssid "${TARGET_BSSID}" \
         -w "${CAPTURE_PREFIX}" \
         --output-format pcap,csv \
-        2>/dev/null &
+        </dev/null >/dev/null 2>&1 &
 
     AIRODUMP_PID=$!
     log "INFO" "Airodump-ng started with PID ${AIRODUMP_PID}"
